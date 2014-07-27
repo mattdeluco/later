@@ -5,8 +5,6 @@
  * http://tools.ietf.org/html/rfc5545#section-3.3.10
  *
  */
-'use strict';
-
 
 later.parse.ical = function (expr) {
 
@@ -52,14 +50,29 @@ later.parse.ical = function (expr) {
 
         var freq = ruleParts['FREQ'];
 
-        if (ruleParts['BYDAY']) {
-            var byDayN = ruleParts['BYDAY'][0];
+        if (!freq) {
+            return false;
+        }
 
-            if ((freq !== 'MONTHLY' || freq !== 'YEARLY') && byDayN != 0) {
+        if (ruleParts['UNTIL'] && ruleParts['COUNT']) {
+            return false;
+        }
+
+        if (ruleParts['BYDAY']) {
+            var byDayN = false;
+            for (var rule in ruleParts['BYDAY']) {
+                if (!ruleParts['BYDAY'].hasOwnProperty(rule)) continue;
+                if (ruleParts['BYDAY'][rule][0] !== 0) {
+                    byDayN = true;
+                    break;
+                }
+            }
+
+            if ((freq !== 'MONTHLY' || freq !== 'YEARLY') && byDayN) {
                 return false;
             }
 
-            if (ruleParts['BYWEEKNO'] && freq === 'YEARLY' && byDayN != 0) {
+            if (ruleParts['BYWEEKNO'] && freq === 'YEARLY' && byDayN) {
                 return false;
             }
         }
@@ -77,6 +90,12 @@ later.parse.ical = function (expr) {
             return false;
         }
 
+        return true;
+    }
+
+    // TODO
+    function parseDateTime(expr) {
+        return new Date();
     }
 
     function parseExpr(expr) {
@@ -89,33 +108,37 @@ later.parse.ical = function (expr) {
         for (var part in parts) {
             if (!parts.hasOwnProperty(part)) continue;
 
-            var keysAndValues = parts[part].split('=');
-            var key = keysAndValues[0];
+            var keyAndValue = parts[part].split('=');
+            var key = keyAndValue[0];
+            var value = keyAndValue[1];
 
             switch (key) {
                 case 'FREQ':
+                    rules[key] = value;
+                    break;
                 case 'UNTIL':
+                    // TODO parse date
+                    rules[key] = parseDateTime(value);
+                    break;
                 case 'COUNT':
                 case 'INTERVAL':
                 case 'WKST':
-                    rules[key] = parseInt(keysAndValues[1], 10);
+                    rules[key] = parseInt(value, 10);
                     break;
                 case 'BYDAY':
-                    // TODO convert day abbreviations to numbers
-                    var days = getMatches(keysAndValues[1], /([+-]?\d)?(\w\w),?/g);
+                    var days = getMatches(value, /([+-]?\d)?(\w\w),?/g);
                     rules[key] = [];
                     for (var day in days) {
                         if (!days.hasOwnProperty(day)) continue;
-                        if (day.length < 3) {
-                            rules[key].push([0, weekday[day[2]]]);
-                        } else {
-                            rules[key].push([parseInt(day[1], 10), weekday[day[2]]]);
-                        }
+                        rules[key].push([
+                            parseInt(days[day][1], 10) || 0,
+                            weekday[days[day][2]]
+                        ]);
                     }
                     break;
                 default:
                     // everything else is a list of numbers
-                    rules[key] = keysAndValues[1].split(',').map(Number);
+                    rules[key] = value.split(',').map(Number);
                     break;
             }
 
@@ -125,8 +148,7 @@ later.parse.ical = function (expr) {
             return recur();
         }
 
-        rules['INTERVAL'] || (rules['INTERVAL'] = 1);
-        r.every(rules['INTERVAL'])[freq[rules['FREQ']]]();
+        r.every(rules['INTERVAL'] || 1)[freq[rules['FREQ']]]();
 
         //byBLAH stuff is all about 'on'
         for (var instance in instances) {

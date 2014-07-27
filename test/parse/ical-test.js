@@ -1,12 +1,54 @@
 /**
  * Created by mdeluco on 2014-07-16.
  */
-'use strict';
 
 var parse = require('../../index').parse.ical;
 var should = require('should');
 
 describe('Parse iCal', function () {
+
+    describe('Invalid Rules have no schedules', function () {
+
+        it('should have FREQ', function () {
+            var p = parse('RRULE:INTERVAL=15');
+            p.schedules.length.should.equal(0);
+        });
+
+        it('should not have both UNTIL and COUNT', function () {
+            var p = parse('RRULE:FREQ=SECONDLY;COUNT=5;UNTIL=20201020');
+            p.schedules.length.should.equal(0);
+        });
+
+        it('should not have a numeric BYDAY value if FREQ is not MONTHLY or YEARLY', function () {
+            var p = parse('RRULE:FREQ=SECONDLY;BYDAY=-1SU,2TH');
+            p.schedules.length.should.equal(0);
+
+            p = parse('RRULE:FREQ=SECONDLY;BYDAY=SU,TH');
+            p.schedules.length.should.equal(1);
+
+            p = parse('RRULE:FREQ=MONTHLY;BYDAY=-1SU,2TH');
+            p.schedules.length.should.equal(1);
+
+            p = parse('RRULE:FREQ=YEARLY;BYDAY=-1SU,2TH');
+            p.schedules.length.should.equal(1);
+        });
+
+        it('should not have a numeric BYDAY value if FREQ is YEARLY and BYWEEKNO is specified', function () {
+            var p = parse('RRULE:FREQ=YEARLY;BYDAY=-1SU,2TH;BYWEEKNO=1,2,3');
+            p.schedules.length.should.equal(0);
+        });
+
+        it('should not have BYMONTHDAY specified when FREQ is WEEKLY', function () {
+            var p = parse('RRULE:FREQ=WEEKLY;BYMONTHDAY=1,2,10');
+            p.schedules.length.should.equal(0);
+        });
+
+        it('should not have BYYEARDAY specified when FREQ is DAILY, WEEKLY, or MONTHLY', function () {
+            var p = parse('RRULE:FREQ=WEEKLY;BYYEARDAY=1,2,10');
+            p.schedules.length.should.equal(0);
+        });
+
+    });
 
     describe('Frequency (on)', function () {
 
