@@ -16,87 +16,99 @@ later.modifier.negative = later.modifier.n = function(period, values) {
      * This modifier is intended to support negative values for a subset of
      * periods outlined in RFC 5545 (iCal specification.)
      */
-    if (['day', 'day of year', 'week of year (ISO)'].indexOf(period.name) < 0) {
-        throw new Error('Negative modifier only intended for periods day, ' +
-            'day of year, and week of year.');
+    // TODO day of year, week of year (ISO)
+    if ('day' !== period.name) {
+        throw new Error('Negative modifier only intended for period day.');
     }
 
+    /**
+     * The negative value of the specified date counting down from the max
+     * extent.
+     *
+     * @param d
+     * @returns {number}
+     */
+    var val = function(d) {
+        return -1 * (period.extent(d)[1] - period.val(d) + 1);
+    };
+
+    /**
+     * Returns true if the val is valid for the date specified.
+     * @param d
+     * @param val
+     * @returns {boolean}
+     */
+    var isValid = function(d, value) {
+        return val(d) === value;
+    };
+
+    /**
+     * The minimum and maximum valid values for the given period.  Based on
+     * the negated maximum (min) and negated minimum (max) of the
+     * period.
+     * @param d
+     * @returns {*[]}
+     */
+    var extent = function(d) {
+        return [-1 * period.extent(d)[1], -1 * period.extent(d)[0]];
+    };
+
+    /**
+     * Returns the start of the next instance of the period value relative
+     * to the given date.  Returns the end of previous period if val is less
+     * than the minimum extent.
+     * @param d
+     * @param val
+     * @returns {*}
+     */
+    var next = function(d, val) {
+        val = val < extent(d)[0] ? extent(d)[0] : val;
+
+        var rolloverVal = period.extent(d)[1] + val + 1;
+
+        var month = later.date.nextRollover(d, rolloverVal, later.D, later.M),
+            DMax = later.D.extent(month)[1];
+
+        val = -1 * val > DMax ? -DMax : val;
+
+        return later.date.next(
+            later.Y.val(month),
+            later.M.val(month),
+            DMax + val + 1
+        );
+    };
+
+    /**
+     * Returns the end of the previous instance of the period value relative
+     * to the given date.  Returns the beginning of the previous period if
+     * val is less than the minimum extent of the previous period.
+     * @param d
+     * @param val
+     * @returns {*}
+     */
+    var prev = function(d, val) {
+        var rolloverVal = period.extent(d)[1] + val + 1;
+        var month = later.date.prevRollover(d, rolloverVal, later.D, later.M),
+            DMax = later.D.extent(month)[1];
+
+        val = -1 * val > DMax ? -1 * DMax : val;
+
+        return later.date.prev(
+            later.Y.val(month),
+            later.M.val(month),
+                DMax + val + 1
+        );
+    };
+
     return {
-
-        /**
-         * Returns the name of the period with the 'negative' modifier
-         */
         name: 'negative ' + period.name,
-
-        /**
-         * Pass through to period
-         */
         range: period.range,
-
-        /**
-         * The negative value of the specified date counting down from the max
-         * extent.
-         *
-         * @param d
-         * @returns {number}
-         */
-        val: function(d) {
-            return -1 * (period.extent(d)[1] - period.val(d) + 1);
-        },
-
-        /**
-         * Returns true if the val is valid for the date specified.
-         * @param d
-         * @param val
-         * @returns {boolean}
-         */
-        isValid: function(d, val) {
-            return later.modifier.negative(period).val(d) === val;
-        },
-
-        /**
-         * The minimum and maximum valid values for the given period.  Based on
-         * the negated maximum (min) and negated minimum (max) of the
-         * period.
-         * @param d
-         * @returns {*[]}
-         */
-        extent: function(d) {
-            return [-1 * period.extent(d)[1], -1 * period.extent(d)[0]];
-        },
-
-        /**
-         * Pass through to period.
-         */
+        val: val,
+        isValid: isValid,
+        extent: extent,
         start: period.start,
-
-        /**
-         * Pass through to period.
-         */
         end: period.end,
-
-        /**
-         * Returns the start of the next instance of the period value relative
-         * to the given date.  Returns the end of previous period if val is less
-         * than the minimum extent.
-         * @param d
-         * @param val
-         * @returns {*}
-         */
-        next: function(d, val) {
-            return period.next(d, period.extent(d)[1] + val + 1);
-        },
-
-        /**
-         * Returns the end of the previous instance of the period value relative
-         * to the given date.  Returns the beginning of the previous period if
-         * val is less than the minimum extent of the previous period.
-         * @param d
-         * @param val
-         * @returns {*}
-         */
-        prev: function(d, val) {
-            return period.prev(d, period.extent(d)[1] + val + 1);
-        }
+        next: next,
+        prev: prev
     };
 };
