@@ -84,9 +84,6 @@ later.modifier.negative = later.modifier.n = function(period, values) {
          * @returns {*}
          */
         next: function(d, val) {
-            if (-1 * val > period.extent(d)[1]) {
-                return period.prev(d);
-            }
             return period.next(d, period.extent(d)[1] + val + 1);
         },
 
@@ -99,9 +96,6 @@ later.modifier.negative = later.modifier.n = function(period, values) {
          * @returns {*}
          */
         prev: function(d, val) {
-            if (-1 * val > period.extent(period.prev(d))[1]) {
-                return period.start(period.prev(d, 1));
-            }
             return period.prev(d, period.extent(d)[1] + val + 1);
         }
     };
