@@ -1505,5 +1505,166 @@ later = function() {
     }
     return parseScheduleExpr(str.toLowerCase());
   };
+  later.parse.ical = function(expr) {
+    var recur = later.parse.recur;
+    var frequency = {
+      SECONDLY: "second",
+      MINUTELY: "minute",
+      HOURLY: "hour",
+      DAILY: "dayOfMonth",
+      WEEKLY: "weekOfMonth",
+      MONTHLY: "month",
+      YEARLY: "year"
+    };
+    var constraints = {
+      BYSECOND: "second",
+      BYMINUTE: "minute",
+      BYHOUR: "hour",
+      BYDAY: "dayOfWeek",
+      BYMONTHDAY: "dayOfMonth",
+      BYYEARDAY: "dayOfYear",
+      BYWEEKNO: "weekOfYear",
+      BYMONTH: "month"
+    };
+    var weekday = {
+      SU: 1,
+      MO: 2,
+      TU: 3,
+      WE: 4,
+      TH: 5,
+      FR: 6,
+      SA: 7
+    };
+    function getMatches(string, regex) {
+      var matches = [];
+      var match;
+      while (match = regex.exec(string)) {
+        matches.push(match);
+      }
+      return matches;
+    }
+    function validateRRule(ruleParts) {
+      if (!ruleParts) return false;
+      var freq = ruleParts["FREQ"];
+      if (!freq) {
+        return false;
+      }
+      if (ruleParts["UNTIL"] && ruleParts["COUNT"]) {
+        return false;
+      }
+      if (ruleParts["BYDAY"]) {
+        var byDayN = false;
+        for (var rule in ruleParts["BYDAY"]) {
+          if (!ruleParts["BYDAY"].hasOwnProperty(rule)) continue;
+          if (ruleParts["BYDAY"][rule][0] !== 0) {
+            byDayN = true;
+            break;
+          }
+        }
+        if ((freq !== "MONTHLY" || freq !== "YEARLY") && byDayN) {
+          return false;
+        }
+        if (ruleParts["BYWEEKNO"] && freq === "YEARLY" && byDayN) {
+          return false;
+        }
+      }
+      if (ruleParts["BYMONTHDAY"] && freq === "WEEKLY") {
+        return false;
+      }
+      if (ruleParts["BYYEARDAY"] && [ "DAILY", "WEEKLY", "MONTHLY" ].indexOf(freq) > -1) {
+        return false;
+      }
+      if (ruleParts["BYWEEKNO"] && freq !== "YEARLY") {
+        return false;
+      }
+      return true;
+    }
+    function parseDateTime(expr) {
+      return new Date();
+    }
+    function parseRRule(expr) {
+      var rule = expr.split(":")[1], parts = rule.split(";"), rules = {};
+      for (var part in parts) {
+        if (!parts.hasOwnProperty(part)) continue;
+        var keyAndValue = parts[part].split("=");
+        var key = keyAndValue[0];
+        var value = keyAndValue[1];
+        switch (key) {
+         case "FREQ":
+          rules[key] = value;
+          break;
+
+         case "UNTIL":
+          rules[key] = parseDateTime(value);
+          break;
+
+         case "COUNT":
+         case "INTERVAL":
+         case "WKST":
+          rules[key] = parseInt(value, 10);
+          break;
+
+         case "BYDAY":
+          var days = getMatches(value, /([+-]?\d)?(\w\w),?/g);
+          rules[key] = [];
+          for (var day in days) {
+            if (!days.hasOwnProperty(day)) continue;
+            rules[key].push([ parseInt(days[day][1], 10) || 0, weekday[days[day][2]] ]);
+          }
+          break;
+
+         default:
+          rules[key] = value.split(",").map(Number);
+          break;
+        }
+      }
+      return rules;
+    }
+    function buildRecurrence(rules) {
+      var r = recur(), freq = rules["FREQ"], error = "";
+      r.every(rules["INTERVAL"] || 1)[frequency[freq]]();
+      for (var rule in rules) {
+        if (!rules.hasOwnProperty(rule)) continue;
+        switch (rule) {
+         case "BYSECOND":
+         case "BYMINUTE":
+         case "BYHOUR":
+         case "BYMONTHDAY":
+         case "BYYEARDAY":
+         case "BYWEEKNO":
+         case "BYMONTH":
+          r.on.apply(r, rules[rule])[constraints[rule]]();
+          break;
+
+         case "BYDAY":
+          for (var i = 0; i < rules[rule].length; i++) {
+            var count = rules[rule][i][0], dow = rules[rule][i][1];
+            if (count) r.on(count).dayOfWeekCount();
+            r.on(dow).dayOfWeek();
+          }
+          break;
+
+         case "COUNT":
+         case "UNTIL":
+         default:
+          break;
+        }
+      }
+      return {
+        schedules: r.schedules,
+        exceptions: r.exceptions,
+        error: error
+      };
+    }
+    var parsedRRule = parseRRule(expr);
+    if (!validateRRule(parsedRRule)) {
+      return {
+        schedules: [],
+        exceptions: [],
+        error: "Invalid RRULE"
+      };
+    }
+    return buildRecurrence(parsedRRule);
+  };
   return later;
 }();
