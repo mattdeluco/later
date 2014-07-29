@@ -555,6 +555,44 @@ later = function() {
       }
     };
   };
+  later.modifier.negative = later.modifier.n = function(period, values) {
+    if ("day" !== period.name) {
+      throw new Error("Negative modifier only intended for period day.");
+    }
+    var val = function(d) {
+      return -1 * (period.extent(d)[1] - period.val(d) + 1);
+    };
+    var isValid = function(d, value) {
+      return val(d) === value;
+    };
+    var extent = function(d) {
+      return [ -1 * period.extent(d)[1], -1 * period.extent(d)[0] ];
+    };
+    var next = function(d, val) {
+      val = val < extent(d)[0] ? extent(d)[0] : val;
+      var rolloverVal = period.extent(d)[1] + val + 1;
+      var month = later.date.nextRollover(d, rolloverVal, later.D, later.M), DMax = later.D.extent(month)[1];
+      val = -1 * val > DMax ? -DMax : val;
+      return later.date.next(later.Y.val(month), later.M.val(month), DMax + val + 1);
+    };
+    var prev = function(d, val) {
+      var rolloverVal = period.extent(d)[1] + val + 1;
+      var month = later.date.prevRollover(d, rolloverVal, later.D, later.M), DMax = later.D.extent(month)[1];
+      val = -1 * val > DMax ? -1 * DMax : val;
+      return later.date.prev(later.Y.val(month), later.M.val(month), DMax + val + 1);
+    };
+    return {
+      name: "negative " + period.name,
+      range: period.range,
+      val: val,
+      isValid: isValid,
+      extent: extent,
+      start: period.start,
+      end: period.end,
+      next: next,
+      prev: prev
+    };
+  };
   later.compile = function(schedDef) {
     var constraints = [], constraintsLen = 0, tickConstraint;
     for (var key in schedDef) {
