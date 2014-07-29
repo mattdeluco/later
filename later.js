@@ -1607,9 +1607,8 @@ later = function() {
          case "BYDAY":
           var days = getMatches(value, /([+-]?\d)?(\w\w),?/g);
           rules[key] = [];
-          for (var day in days) {
-            if (!days.hasOwnProperty(day)) continue;
-            rules[key].push([ parseInt(days[day][1], 10) || 0, weekday[days[day][2]] ]);
+          for (var i = 0; i < days.length; i++) {
+            rules[key].push([ parseInt(days[i][1], 10) || 0, weekday[days[i][2]] ]);
           }
           break;
 
