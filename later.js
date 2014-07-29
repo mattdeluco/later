@@ -1553,19 +1553,10 @@ later = function() {
         return false;
       }
       if (ruleParts["BYDAY"]) {
-        var byDayN = false;
-        for (var rule in ruleParts["BYDAY"]) {
-          if (!ruleParts["BYDAY"].hasOwnProperty(rule)) continue;
-          if (ruleParts["BYDAY"][rule][0] !== 0) {
-            byDayN = true;
-            break;
+        for (var i = 0; i < ruleParts["BYDAY"].length; i++) {
+          if (ruleParts["BYDAY"][i][0] !== 0 && (freq !== "MONTHLY" && freq !== "YEARLY" || ruleParts["BYWEEKNO"] && freq === "YEARLY")) {
+            return false;
           }
-        }
-        if ((freq !== "MONTHLY" || freq !== "YEARLY") && byDayN) {
-          return false;
-        }
-        if (ruleParts["BYWEEKNO"] && freq === "YEARLY" && byDayN) {
-          return false;
         }
       }
       if (ruleParts["BYMONTHDAY"] && freq === "WEEKLY") {
