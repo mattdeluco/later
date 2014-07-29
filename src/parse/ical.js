@@ -10,7 +10,7 @@ later.parse.ical = function (expr) {
 
     var recur = later.parse.recur;
 
-    var freq = {
+    var frequency = {
         SECONDLY: 'second',
         MINUTELY: 'minute',
         HOURLY: 'hour',
@@ -20,7 +20,7 @@ later.parse.ical = function (expr) {
         YEARLY: 'year'
     };
 
-    var instances = {
+    var constraints = {
         BYSECOND: 'second',
         BYMINUTE: 'minute',
         BYHOUR: 'hour',
@@ -98,10 +98,9 @@ later.parse.ical = function (expr) {
         return new Date();
     }
 
-    function parseExpr(expr) {
+    function parseRRule(expr) {
 
-        var r = recur(),
-            rule = expr.split(':')[1],
+        var rule = expr.split(':')[1],
             parts = rule.split(';'),
             rules = {};
 
@@ -144,22 +143,61 @@ later.parse.ical = function (expr) {
 
         }
 
-        if (!validateRRule(rules)) {
-            return recur();
-        }
-
-        r.every(rules['INTERVAL'] || 1)[freq[rules['FREQ']]]();
-
-        //byBLAH stuff is all about 'on'
-        for (var instance in instances) {
-            if (!instances.hasOwnProperty(instance)) continue;
-            if (!rules[instance]) continue;
-            r.on.apply(r, rules[instance])[instances[instance]]();
-        }
-
-        return r;
+        return rules;
 
     }
 
-    return parseExpr(expr);
+    function buildRecurrence(rules) {
+        var r = recur(),
+            freq = rules['FREQ'],
+            error = '';
+
+        r.every(rules['INTERVAL'] || 1)[frequency[freq]]();
+
+        for (var rule in rules) {
+            if (!rules.hasOwnProperty(rule)) continue;
+
+            switch (rule) {
+                // TODO case 'BYSETPOS':
+                case 'BYSECOND':
+                case 'BYMINUTE':
+                case 'BYHOUR':
+                case 'BYMONTHDAY':
+                    // TODO negative modifier
+                case 'BYYEARDAY':
+                    // TODO negative modifier
+                case 'BYWEEKNO':
+                    // TODO negative modifier
+                case 'BYMONTH':
+                    r.on.apply(r, rules[rule])[constraints[rule]]();
+                    break;
+                case 'BYDAY':
+                    // TODO negative modifier
+                    for (var i = 0; i < rules[rule].length; i++) {
+                        var count = rules[rule][i][0],
+                            dow = rules[rule][i][1];
+
+                        if (count) r.on(count).dayOfWeekCount();
+                        r.on(dow).dayOfWeek();
+                    }
+                    break;
+                case 'COUNT':
+                case 'UNTIL':
+                    // TODO create exception with after modifier per suggestion
+                    // https://github.com/bunkat/later/issues/59
+                default:
+                    break;
+            }
+        }
+
+        return {schedules: r.schedules, exceptions: r.exceptions, error: error};
+    }
+
+    var parsedRRule = parseRRule(expr);
+
+    if (!validateRRule(parsedRRule)) {
+        return {schedules: [], exceptions: [], error: 'Invalid RRULE'};
+    }
+
+    return buildRecurrence(parsedRRule);
 };

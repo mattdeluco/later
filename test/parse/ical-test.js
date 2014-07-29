@@ -22,15 +22,6 @@ describe('Parse iCal', function () {
         it('should not have a numeric BYDAY value if FREQ is not MONTHLY or YEARLY', function () {
             var p = parse('RRULE:FREQ=SECONDLY;BYDAY=-1SU,2TH');
             p.schedules.length.should.equal(0);
-
-            p = parse('RRULE:FREQ=SECONDLY;BYDAY=SU,TH');
-            p.schedules.length.should.equal(1);
-
-            p = parse('RRULE:FREQ=MONTHLY;BYDAY=-1SU,2TH');
-            p.schedules.length.should.equal(1);
-
-            p = parse('RRULE:FREQ=YEARLY;BYDAY=-1SU,2TH');
-            p.schedules.length.should.equal(1);
         });
 
         it('should not have a numeric BYDAY value if FREQ is YEARLY and BYWEEKNO is specified', function () {
@@ -99,6 +90,16 @@ describe('Parse iCal', function () {
             p.schedules[0].should.have.property('m', [7, 13]);
         });
 
+
+    });
+
+    describe('BYDAY', function () {
+
+        it('should occur every Wednesday', function () {
+            var p = parse('RRULE:FREQ=WEEKLY;BYDAY=WE');
+            p.schedules[0].should.have.property('d', [4]);
+            p.schedules[0].should.have.property('wm', [1, 2, 3, 4, 5]);
+        });
 
     });
 
