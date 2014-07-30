@@ -1571,7 +1571,17 @@ later = function() {
       return true;
     }
     function parseDateTime(expr) {
-      return new Date();
+      var r = /(\d{4})(\d\d)(\d\d)(T(\d\d)(\d\d)(\d\d)(Z)?)?/;
+      var m = r.exec(expr);
+      if (m[8]) {
+        later.date.UTC();
+      } else {
+        later.date.localTime();
+      }
+      if (m[4]) {
+        return later.date.build(m[1], m[2] - 1, m[3], m[5], m[6], m[7]);
+      }
+      return later.date.build(m[1], m[2] - 1, m[3], 0, 0, 0);
     }
     function parseRRule(expr) {
       var rule = expr.split(":")[1], parts = rule.split(";"), rules = {};
@@ -1634,11 +1644,12 @@ later = function() {
           }
           break;
 
-         case "COUNT":
-         case "UNTIL":
          default:
           break;
         }
+      }
+      if (rules["UNTIL"]) {
+        r.except().after(rules["UNTIL"]).fullDate();
       }
       return {
         schedules: r.schedules,

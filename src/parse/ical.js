@@ -84,10 +84,24 @@ later.parse.ical = function (expr) {
         return true;
     }
 
-    // TODO
+
     function parseDateTime(expr) {
-        return new Date();
+        var r = /(\d{4})(\d\d)(\d\d)(T(\d\d)(\d\d)(\d\d)(Z)?)?/;
+        var m = r.exec(expr);
+
+        if (m[8]) {
+            later.date.UTC();
+        } else {
+            later.date.localTime();
+        }
+
+        if (m[4]) {
+            return later.date.build(m[1], m[2]-1, m[3], m[5], m[6], m[7]);
+        }
+
+        return later.date.build(m[1], m[2]-1, m[3], 0, 0, 0);
     }
+
 
     function parseRRule(expr) {
 
@@ -107,7 +121,6 @@ later.parse.ical = function (expr) {
                     rules[key] = value;
                     break;
                 case 'UNTIL':
-                    // TODO parse date
                     rules[key] = parseDateTime(value);
                     break;
                 case 'COUNT':
@@ -147,6 +160,8 @@ later.parse.ical = function (expr) {
         for (var rule in rules) {
             if (!rules.hasOwnProperty(rule)) continue;
 
+            // TODO RFC 5545 specifies order to evaluate BYX rules
+            // Not sure if order matters when using parse.recur.
             switch (rule) {
                 // TODO case 'BYSETPOS':
                 case 'BYSECOND':
@@ -171,14 +186,24 @@ later.parse.ical = function (expr) {
                         r.on(dow).dayOfWeek();
                     }
                     break;
-                case 'COUNT':
-                case 'UNTIL':
-                    // TODO create exception with after modifier per suggestion
-                    // https://github.com/bunkat/later/issues/59
                 default:
                     break;
             }
         }
+
+        // Add exception last
+        if (rules['UNTIL']) {
+            r.except().after(rules['UNTIL']).fullDate();
+        }
+        /*
+        // Because the actual start date isn't known until a schedule is
+        // generated, it doesn't make sense to create an exception here.
+        else if (rules['COUNT']) {
+            var next = later.schedule(r).next(rules['COUNT']);
+            next = rules['COUNT'] > 1 ? next : [next];
+            r.except().after(new Date(next[next.length - 1])).fullDate();
+        }
+        */
 
         return {schedules: r.schedules, exceptions: r.exceptions, error: error};
     }

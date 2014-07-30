@@ -141,4 +141,26 @@ describe('Parse iCal', function () {
 
     });
 
+    describe('COUNT and UNTIL', function () {
+
+        it('should create an after exception for the given date', function () {
+            var p = parse('RRULE:FREQ=DAILY;INTERVAL=2;UNTIL=20201031T000000Z');
+            p.exceptions.should.have.length(1);
+            p.exceptions[0].should.containEql({'fd_a': [1604102400000]});
+        });
+
+        // See note in ical.js where COUNT exception is commented out
+        it.skip('should create an after exception for the given count', function () {
+            var now = new Date();
+            var tonight = new Date(Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate())).getTime();
+            var p = parse('RRULE:FREQ=DAILY;BYHOUR=0;BYMINUTE=0;BYSECOND=0;COUNT=1');
+            p.exceptions.should.have.length(1);
+            p.exceptions[0].should.containEql({'fd_a': [tonight]});
+        });
+
+    });
+
 });
