@@ -382,7 +382,12 @@ later.schedule = function(sched) {
     * @param {Date} endDate: The latest a valid instance can occur
     */
     next: function(count, startDate, endDate) {
-      return getInstances('next', count || 1, startDate, endDate);
+      return getInstances(
+          'next',
+          count || sched.count || 1,
+          startDate || sched.startDate,
+          endDate || sched.endDate
+      );
     },
 
     /**

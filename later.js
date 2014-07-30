@@ -782,7 +782,7 @@ later = function() {
         return getInstances("next", 1, d, d) !== later.NEVER;
       },
       next: function(count, startDate, endDate) {
-        return getInstances("next", count || 1, startDate, endDate);
+        return getInstances("next", count || sched.count || 1, startDate || sched.startDate, endDate || sched.endDate);
       },
       prev: function(count, startDate, endDate) {
         return getInstances("prev", count || 1, startDate, endDate);

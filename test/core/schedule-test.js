@@ -53,6 +53,15 @@ describe('Schedule', function() {
         ]);
     });
 
+    it('should call next using the count and startDate in the schedule', function () {
+      var s = {count: 3, startDate: d, schedules: [{Y:[2015,2016,2017]}]};
+      schedule(s).next().should.eql([
+          new Date('2015-01-01T00:00:00Z'),
+          new Date('2016-01-01T00:00:00Z'),
+          new Date('2017-01-01T00:00:00Z')
+      ]);
+    });
+
     it('should return later.NEVER if no next valid date exists', function() {
       var s = {schedules: [{Y:[2012]}]};
       should.equal(schedule(s).next(1, d), later.NEVER);
@@ -61,6 +70,11 @@ describe('Schedule', function() {
     it('should return later.NEVER if end date precludes a valid schedule', function() {
       var s = {schedules: [{Y:[2017]}]};
       should.equal(schedule(s).next(1, d, e), later.NEVER);
+    });
+
+    it('should support endDate in the schedule object', function() {
+        var s = {count: 1, startDate: d, endDate: e, schedules: [{Y:[2017]}]};
+        should.equal(schedule(s).next(), later.NEVER);
     });
 
   });
