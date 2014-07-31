@@ -782,6 +782,11 @@ later = function() {
         return getInstances("next", 1, d, d) !== later.NEVER;
       },
       next: function(count, startDate, endDate) {
+        if (count instanceof Date) {
+          endDate = startDate;
+          startDate = count;
+          count = undefined;
+        }
         return getInstances("next", count || sched.count || 1, startDate || sched.startDate, endDate || sched.endDate);
       },
       prev: function(count, startDate, endDate) {
@@ -1568,16 +1573,14 @@ later = function() {
       if (ruleParts["BYWEEKNO"] && freq !== "YEARLY") {
         return false;
       }
+      if (ruleParts["BYSETPOS"] && constraints.keys.indexOf(ruleParts.keys) === -1) {
+        return false;
+      }
       return true;
     }
     function parseDateTime(expr) {
       var r = /(\d{4})(\d\d)(\d\d)(T(\d\d)(\d\d)(\d\d)(Z)?)?/;
       var m = r.exec(expr);
-      if (m[8]) {
-        later.date.UTC();
-      } else {
-        later.date.localTime();
-      }
       if (m[4]) {
         return later.date.build(m[1], m[2] - 1, m[3], m[5], m[6], m[7]);
       }
@@ -1621,7 +1624,11 @@ later = function() {
       return rules;
     }
     function buildRecurrence(rules) {
-      var r = recur(), freq = rules["FREQ"], error = "";
+      var r = recur(), freq = rules["FREQ"], schedule = {
+        schedules: [],
+        exceptions: [],
+        error: ""
+      };
       r.every(rules["INTERVAL"] || 1)[frequency[freq]]();
       for (var rule in rules) {
         if (!rules.hasOwnProperty(rule)) continue;
@@ -1644,18 +1651,24 @@ later = function() {
           }
           break;
 
+         case "BYSETPOS":
+          break;
+
+         case "COUNT":
+          schedule["count"] = rules[rule];
+          break;
+
+         case "UNTIL":
+          schedule["endDate"] = rules[rule];
+          break;
+
          default:
           break;
         }
       }
-      if (rules["UNTIL"]) {
-        r.except().after(rules["UNTIL"]).fullDate();
-      }
-      return {
-        schedules: r.schedules,
-        exceptions: r.exceptions,
-        error: error
-      };
+      schedule.schedules = r.schedules;
+      schedule.exceptions = r.exceptions;
+      return schedule;
     }
     var parsedRRule = parseRRule(expr);
     if (!validateRRule(parsedRRule)) {

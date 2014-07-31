@@ -2,8 +2,10 @@
  * Created by mdeluco on 2014-07-16.
  */
 
-var parse = require('../../index').parse.ical;
-var should = require('should');
+var later = require('../../index'),
+    parse = later.parse.ical,
+    schedule = later.schedule,
+    should = require('should');
 
 describe('Parse iCal', function () {
 
@@ -143,22 +145,26 @@ describe('Parse iCal', function () {
 
     describe('COUNT and UNTIL', function () {
 
-        it('should create an after exception for the given date', function () {
-            var p = parse('RRULE:FREQ=DAILY;INTERVAL=2;UNTIL=20201031T000000Z');
-            p.exceptions.should.have.length(1);
-            p.exceptions[0].should.containEql({'fd_a': [1604102400000]});
+        later.date.UTC();
+        var d = new Date('2014-07-31T16:00:00Z');
+
+        it('should limit the schedule to 3 occurrences', function () {
+            var p = parse('RRULE:FREQ=HOURLY;COUNT=3');
+            schedule(p).next(d).should.eql([
+                new Date('2014-07-31T16:00:00Z'),
+                new Date('2014-07-31T17:00:00Z'),
+                new Date('2014-07-31T18:00:00Z')
+            ]);
         });
 
-        // See note in ical.js where COUNT exception is commented out
-        it.skip('should create an after exception for the given count', function () {
-            var now = new Date();
-            var tonight = new Date(Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate())).getTime();
-            var p = parse('RRULE:FREQ=DAILY;BYHOUR=0;BYMINUTE=0;BYSECOND=0;COUNT=1');
-            p.exceptions.should.have.length(1);
-            p.exceptions[0].should.containEql({'fd_a': [tonight]});
+        it('should end on the date specified by UNTIL', function () {
+            var p = parse('RRULE:FREQ=HOURLY;UNTIL=20140731T180000Z');
+            console.log(p.endDate.toString());
+            schedule(p).next(10, d).should.eql([
+                new Date('2014-07-31T16:00:00Z'),
+                new Date('2014-07-31T17:00:00Z'),
+                new Date('2014-07-31T18:00:00Z')
+            ]);
         });
 
     });

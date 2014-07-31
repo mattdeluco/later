@@ -81,6 +81,10 @@ later.parse.ical = function (expr) {
             return false;
         }
 
+        if (ruleParts['BYSETPOS'] && constraints.keys.indexOf(ruleParts.keys) === -1) {
+            return false;
+        }
+
         return true;
     }
 
@@ -89,11 +93,14 @@ later.parse.ical = function (expr) {
         var r = /(\d{4})(\d\d)(\d\d)(T(\d\d)(\d\d)(\d\d)(Z)?)?/;
         var m = r.exec(expr);
 
+        /*
+        // TODO Figure out TZ support
         if (m[8]) {
             later.date.UTC();
         } else {
             later.date.localTime();
         }
+        */
 
         if (m[4]) {
             return later.date.build(m[1], m[2]-1, m[3], m[5], m[6], m[7]);
@@ -153,7 +160,7 @@ later.parse.ical = function (expr) {
     function buildRecurrence(rules) {
         var r = recur(),
             freq = rules['FREQ'],
-            error = '';
+            schedule = {schedules: [], exceptions: [], error: ''};
 
         r.every(rules['INTERVAL'] || 1)[frequency[freq]]();
 
@@ -163,7 +170,6 @@ later.parse.ical = function (expr) {
             // TODO RFC 5545 specifies order to evaluate BYX rules
             // Not sure if order matters when using parse.recur.
             switch (rule) {
-                // TODO case 'BYSETPOS':
                 case 'BYSECOND':
                 case 'BYMINUTE':
                 case 'BYHOUR':
@@ -186,26 +192,24 @@ later.parse.ical = function (expr) {
                         r.on(dow).dayOfWeek();
                     }
                     break;
+                case 'BYSETPOS':
+                    // TODO
+                    break;
+                case 'COUNT':
+                    schedule['count'] = rules[rule];
+                    break;
+                case 'UNTIL':
+                    schedule['endDate'] = rules[rule];
+                    break;
                 default:
                     break;
             }
         }
 
-        // Add exception last
-        if (rules['UNTIL']) {
-            r.except().after(rules['UNTIL']).fullDate();
-        }
-        /*
-        // Because the actual start date isn't known until a schedule is
-        // generated, it doesn't make sense to create an exception here.
-        else if (rules['COUNT']) {
-            var next = later.schedule(r).next(rules['COUNT']);
-            next = rules['COUNT'] > 1 ? next : [next];
-            r.except().after(new Date(next[next.length - 1])).fullDate();
-        }
-        */
+        schedule.schedules = r.schedules;
+        schedule.exceptions = r.exceptions;
 
-        return {schedules: r.schedules, exceptions: r.exceptions, error: error};
+        return schedule;
     }
 
     var parsedRRule = parseRRule(expr);
