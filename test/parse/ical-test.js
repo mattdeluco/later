@@ -169,4 +169,37 @@ describe('Parse iCal', function () {
 
     });
 
+    describe('Misc Schedules', function () {
+
+        it.skip('The third instance into the month of one of Tuesday, Wednesday, ' +
+            'or Thursday, for the next 3 months',
+            function () {
+                var d = new Date('1997-09-04T09:00:00Z');
+                var p = parse('RRULE:FREQ=MONTHLY;COUNT=3;BYDAY=TU,WE,TH;BYSETPOS=3');
+                schedule(p).next(3, d).should.eql([
+                    new Date('1997-09-04T09:00:00Z'),
+                    new Date('1997-10-07T09:00:00Z'),
+                    new Date('1997-11-06T09:00:00Z')
+                ]);
+            }
+        );
+
+    });
+
+    describe('RFC 5545 Examples', function () {
+
+        later.date.UTC();
+
+        it('should occur daily for 10 occurrences', function () {
+            var d = new Date('1997-09-02T09:00:00Z');
+            var p = parse('RRULE:FREQ=DAILY;COUNT=10');
+            var dates = [];
+            for (var i = 2; i < 12; i++) {
+                dates.push(new Date(1997, 08, i, 9, 0, 0));
+            }
+            schedule(p).next(d).should.eql(dates);
+        });
+
+    });
+
 });
